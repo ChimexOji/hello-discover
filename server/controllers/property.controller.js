@@ -13,9 +13,51 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-const getAllProperties = async (req, res) => {};
-const getPropertyDetail = async (req, res) => {};
+// controller for displaying all the created Properties
+const getAllProperties = async (req, res) => {  // req.query- refine link to server
+    const { _end, _order, _start, _sort, title_like = "", propertyType = "" } = req.query
 
+    const query = {};
+
+    if(propertyType !== '') {
+        query.propertyType = propertyType;
+    }
+
+    if(title_like) {
+        query.title = { $regex: title_like, $options: 'i' };
+    }
+
+    try {
+        const count = await Property.countDocuments({ query });
+
+        const properties = await Property
+            .find(query)
+            .limit(_end)
+            .skip(_start)
+            .sort({ [_sort]: _order })
+
+        // headers to expose number of resources to refine frontend
+        res.header('x-total-count', count);
+        res.header('Access-Control-Expose-Headers', 'x-total-count');
+
+        res.status(200).json(properties);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+const getPropertyDetail = async (req, res) => {
+    const { id } = req.params;
+    const propertyExists = await Property.findOne({ _id: id }).populate('creator');
+
+    if(propertyExists) {
+        res.status(200).json(propertyExists)
+    } else {
+        res.status(404).json({ message: 'Property not found' });
+    }
+};
+
+// controller for creating Properties and saving to database
 const createProperty = async (req, res) => {
     try {
         const { title, description, propertyType, location, price, photo, email } = req.body;
@@ -54,7 +96,30 @@ const createProperty = async (req, res) => {
 };
 
 const updateProperty = async (req, res) => {};
-const deleteProperty = async (req, res) => {};
+
+const deleteProperty = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const propertyToDelete = await Property.findById({ _id: id }).populate('creator');
+
+        if(!propertyToDelete) throw new Error('Property not found');
+
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        // propertyToDelete.remove({ session });
+        await Property.deleteOne({ _id: id }, { session });
+        propertyToDelete.creator.allProperties.pull(propertyToDelete);
+
+        await propertyToDelete.creator.save({session});
+        await session.commitTransaction();
+
+            res.status(200).json({ message: 'Property deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+};
 
 export {
     getAllProperties,
