@@ -95,8 +95,30 @@ const createProperty = async (req, res) => {
     }
 };
 
-const updateProperty = async (req, res) => {};
+// controller for updating properties
+const updateProperty = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, propertyType, location, price, photo } = req.body;
 
+        const photoUrl = await cloudinary.uploader.upload(photo);
+
+        await Property.findByIdAndUpdate({ _id: id }, {
+            title,
+            description,
+            propertyType,
+            location,
+            price,
+            photo: photoUrl.url || photo
+        })
+
+        res.status(200).json({ message: 'Property updated successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// controller for deleting property details
 const deleteProperty = async (req, res) => {
     try {
         const { id } = req.params;

@@ -71,6 +71,7 @@ propertyImage }: FormProps) => {
               <MenuItem value="duplex">Duplex</MenuItem>
               <MenuItem value="studio">Studio</MenuItem>
               <MenuItem value="chalet">Chalet</MenuItem>
+              <MenuItem value="hotel">Hotel</MenuItem>
             </Select>
           </FormControl>
 
